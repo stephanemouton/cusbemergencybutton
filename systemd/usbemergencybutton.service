@@ -1,0 +1,15 @@
+# systemd service description for USB Emergency Button management
+# To be installed in /etc/systemd/system
+[Unit]
+Description=USB Emergency Button Management Service
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/usbemergencybutton
+StandardOutput=null
+# usbpanicbutton is starting a child process as expected for standard services
+RemainAfterExit=no
+
+[Install]
+WantedBy=multi-user.target
+Alias=emergencybutton.service
