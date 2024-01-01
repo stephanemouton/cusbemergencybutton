@@ -3,7 +3,9 @@
 ## Summary
 
 The **usbemergencybutton** _daemon_ allows to use USB keyboards, sometimes very specific ones with a single key like the emergency button below, to trigger a script without being logged. It is a tool targeted to launch actions on a Linux machine in case of emergency.
+
 ![USB emergency button](./emergency_button.jpg)
+
 *Example of USB button, defined by Vendor ID 0x2704 & Product ID 0x2018. See [tools](./tools/README.md) for more information.*
 
 A script is associated to a button press using configuration file and is launched synchronously or in background.
