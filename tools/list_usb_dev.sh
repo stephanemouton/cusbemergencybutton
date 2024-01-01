@@ -1,5 +1,7 @@
 #!/bin/bash
+# Display USB input devices found, not only keyboards or mouses
 
+echo "-- USB input devices found (not only keyboards or mouses) --"
 for sysdevpath in $(find /sys/bus/usb/devices/usb*/ -name dev); do
     (
         syspath="${sysdevpath%/dev}"

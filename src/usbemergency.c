@@ -1,5 +1,5 @@
 // 
-// File:   usbemergency.c
+// File: usbemergency.c
 //
 // Goal: main program, launched as daemon and in charge of launching actin on button press
 //
@@ -25,19 +25,40 @@
 #include <stdbool.h>        /* booleans */
 #include <linux/input.h>    /* EVIOCGVERSION ++ */
 
+#include "pifdfile.h"
 #include "parameters.h"
 #include "eventmanager.h"
 
 // ======== Global variables and DEFINEs
 #define EXIT_SUCCESS 0
 #define EXIT_FAILURE 1
-#define PROGRAM_VERSION "0.1"
-#define DEFAULT_CONFIGURATION_FILE "/etc/usbemergency.conf"
+#define PROGRAM_VERSION "0.2"
+#define DEFAULT_CONFIGURATION_FILE "/etc/usbemergencybutton.conf"
+#define PID_FILE_NAME "/var/run/usbemergencybutton.pid"
 
 char * found_event = NULL;
 bool halt_requested = false;
+struct sigaction sa;
+// self explaining
+char* pid_file_name = (char *)PID_FILE_NAME;
 
-char* log_name;
+// ==== Information from configuration file
+// Defined as globals in order to be used by signal handling
+char* config_file_name = (char *)DEFAULT_CONFIGURATION_FILE;
+// Name of script to launch
+char* script_name = (char *)DEFAULT_SCRIPT;
+// Scrit launched in background (asynchronous mode) or not?
+bool asynchronous_launch = false;
+// Launched in console, as debug mode or as daemon?
+bool interactive_mode = false;
+// Values for USB emergency button
+unsigned short vendor_id  = DEFAULT_VENDOR_ID;
+unsigned short product_id = DEFAULT_PRODUCT_ID;
+// Defined but not useful since there is generally only one key ...
+// Do we check a specific key
+bool check_key_value = false;
+// If yes then which one?
+int key_value = DEFAULT_KEY_VALUE ;
 
 // ======== Global signal_management
 void signal_handler(int signal){
@@ -47,16 +68,41 @@ void signal_handler(int signal){
         break;
         // re-read configuration file
         case SIGHUP :
-            syslog(LOG_INFO, "Caught SIGHUP. Unable to reload parameters in this version. Please restart.");
-            exit(EXIT_SUCCESS);
+            syslog(LOG_INFO, "Caught SIGHUP. Reloading parameters from %s .",config_file_name);
+            if(!load_parameters_from( config_file_name,
+                                        script_name,
+                                        &asynchronous_launch,
+                                        &vendor_id,
+                                        &product_id,
+                                        &check_key_value,
+                                        &key_value)){
+                exit(EXIT_FAILURE);
+            }
+            // Getting event source anew 
+            found_event = get_matching_event(vendor_id, product_id);
+            if (found_event == NULL) {
+                syslog(LOG_ERR, "No device [VendorID=%04x|ProductID=%04x] found", vendor_id, product_id);
+                exit(EXIT_FAILURE);
+            }
         break;
         // When requested to stop, then cleanly quit
         case SIGINT  :
-        case SIGQUIT :
+            syslog(LOG_INFO, "Caught signal %d, waiting for input on device to exit.",signal);
+            halt_requested = true;
+        break;
         case SIGTERM :
             syslog(LOG_INFO, "Caught signal %d, exiting.",signal);
+            if (!interactive_mode){
+                remove_pid (pid_file_name);
+            }
             exit(EXIT_SUCCESS);
         break;
+        case SIGQUIT :
+            syslog(LOG_INFO, "Caught signal %d, exiting.",signal);
+            if (!interactive_mode){
+                remove_pid (pid_file_name);
+            }
+            exit(EXIT_SUCCESS);
         default:
             syslog(LOG_ERR, "Caught unhandled signal %d", signal);
         break;
@@ -70,7 +116,7 @@ void display_help(char *program_name){
     printf("Usage: %s [OPTIONS]\n",program_name);
     printf("Options\n");
     printf("-h print this help and exit\n");
-    printf("-d debug mode, launch program in display mode (remain connected to console)\n");
+    printf("-d debug mode, launch program in display mode (remain connected to console) without PID file created\n");
     printf("-f FILE change configuration file (default is %s)\n",DEFAULT_CONFIGURATION_FILE);
     printf("-g generate configuration file and halt\n");
 }
@@ -95,16 +141,16 @@ void generate_configuration_file(){
             "# Default is false\n"
             "asynchronous_launch = false;\n"
             "# Script launched when the button is pressed\n"
-            "# (Default is /bin/true)\n"
+            "# (Default is %s)\n"
             "script = %s;\n",
-            DEFAULT_VENDOR_ID, DEFAULT_PRODUCT_ID,DEFAULT_KEY_VALUE, DEFAULT_SCRIPT);
+            DEFAULT_VENDOR_ID, DEFAULT_PRODUCT_ID,DEFAULT_KEY_VALUE, DEFAULT_SCRIPT, DEFAULT_SCRIPT);
 }
 
 static void daemonize(void){
     pid_t pid, sid;
 
     /* already a daemon */
-    if ( getppid() == 1 ) return;
+    if (getppid() == 1) return;
 
     /* Fork off the parent process */
     pid = fork();
@@ -143,32 +189,18 @@ static void daemonize(void){
 
 // ======== 
 int main(int argc, char** argv){
-    bool interactive_mode = false;
     bool help_mode = false;
     bool need_generate_config = false;
     int option = 0;
     pid_t pid;
-    struct sigaction sa;
 
     int logopt = LOG_PID|LOG_DAEMON|LOG_CONS|LOG_NDELAY ;
 
     halt_requested = false;
     found_event = NULL;
 
-    // ==== Information from configuration file
-    char* config_file_name = (char *)DEFAULT_CONFIGURATION_FILE;
-    // Script to launch
-    char* script_name = (char *)DEFAULT_SCRIPT;
-    // Scrit launched in background (asynchronous mode) or not?
-    bool asynchronous_launch = false;
-    // Values for USB emergency button
-    unsigned short vendor_id  = DEFAULT_VENDOR_ID;
-    unsigned short product_id = DEFAULT_PRODUCT_ID;
-    // Defined but not useful since there is generally only one key ...
-    // Do we check a specific key
-    bool check_key_value = false;
-    // If yes then which one?
-    int key_value = DEFAULT_KEY_VALUE ;
+    // Open Syslog communication
+    openlog(argv[0], logopt, LOG_USER);
 
     // ==== Handle parameters
     /*
@@ -209,49 +241,49 @@ int main(int argc, char** argv){
     // Display also syslog messages in console
     if (interactive_mode) logopt|=LOG_PERROR;
 
-    // Open Syslog communication
-    openlog(argv[0], logopt, LOG_USER);
     syslog(LOG_INFO, "Starting with configuration file %s expected.", config_file_name);
 
-    // ==== read parameters from configuration file
-    // prepare defaut value for script name, allocated, before reading configuration file
-    script_name = strdup((char *)DEFAULT_SCRIPT);
-
-    if(access(config_file_name,R_OK) == -1){
-        syslog(LOG_ERR, "Unable to open configuration file %s\n",config_file_name);
-        exit(EXIT_FAILURE);
+    // Is the program already running ?
+    // Not checked in debug mode: several instances are tolerated
+    if (!interactive_mode){
+        if (check_pid (pid_file_name)){
+            syslog(LOG_ERR, "According to PID file %s, an instance is already running. Aborting", pid_file_name);
+            exit(EXIT_FAILURE);
+        }
     }
 
-    script_name = load_parameters_from( config_file_name,
-                                        script_name,
-                                        &asynchronous_launch,
-                                        &vendor_id,
-                                        &product_id,
-                                        &check_key_value,
-                                        &key_value);
-
-    // ==== Find which event source in /dev/input/event* matches the keyboard design by vendorID and productID
-    found_event = get_matching_event(vendor_id, product_id);
-
-    if (found_event == NULL) {
-        syslog(LOG_ERR, "No device [VendorID=%04x|ProductID=%04x] found", vendor_id, product_id);
+    if (!load_parameters_from( config_file_name,
+                                script_name,
+                                &asynchronous_launch,
+                                &vendor_id,
+                                &product_id,
+                                &check_key_value,
+                                &key_value)){
         exit(EXIT_FAILURE);
-    }
+    }   
 
     // Cleanly run the program as a daemon
     if (!interactive_mode){
         daemonize();
     }
 
+    pid = getpid();
+    syslog(LOG_INFO, "PID is %d", pid);
+    if (!interactive_mode){
+        write_pid (pid_file_name);
+    }
+
     // Configure signal handling to:
     // - avoid child zombie creation in asynchronous modeUSB communication
     // - allow re-reading of configuration file
     // - handle signal and cleanly stop
-    memset (&sa, 0, sizeof sa);
-    sa.sa_flags = 0;
+    memset (&sa, 0, sizeof(sa));
+    //sa.sa_flags = 0;
+    sa.sa_flags = SA_RESTART | SA_SIGINFO;
     // signalHandler will deal with the 3 cases described previously
     sa.sa_handler = signal_handler;
     sigemptyset(&(sa.sa_mask));
+
     if(sigaction(SIGCHLD, &sa, NULL) != 0){
         syslog(LOG_ERR, "Unable to perform sigaction on SIGCHLD");
         exit(EXIT_FAILURE);
@@ -272,6 +304,13 @@ int main(int argc, char** argv){
         syslog(LOG_ERR, "Unable to perform sigaction on SIGQUIT");
         exit(EXIT_FAILURE);
     }        
+
+    // ==== Find which event source in /dev/input/event* matches the keyboard design by vendorID and productID
+    found_event = get_matching_event(vendor_id, product_id);
+    if (found_event == NULL) {
+        syslog(LOG_ERR, "No device [VendorID=%04x|ProductID=%04x] found", vendor_id, product_id);
+        exit(EXIT_FAILURE);
+    }
 
     // ==== Now that we know the right event source, let's read it in the main loop
     while (!halt_requested){
@@ -309,6 +348,8 @@ int main(int argc, char** argv){
             halt_requested = true;
         }
     }
-    free(script_name);
-    syslog(LOG_INFO, "Stoping.");
+    if (!interactive_mode){
+        remove_pid (pid_file_name);
+    }
+    syslog(LOG_INFO, "Ending.");
 }  

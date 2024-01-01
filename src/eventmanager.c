@@ -97,6 +97,32 @@ char * get_matching_event(unsigned short vendor_id, unsigned short product_id){
     return(found_event);
 }
 
+int  get_key(char * found_event){
+    int fd;
+    unsigned int size;
+    unsigned int key_value=0;
+    if ((fd = open(found_event, O_RDONLY)) < 0) {
+        return(-1);
+    }
+    size = read(fd, ev, sizeof(struct input_event) * EV_BUF_SIZE);
+    // If something wrong happened ot signal was caught, size < 0 and we need to skip
+    if (size < 0){
+        close(fd);
+        return(-1);
+    } else {
+        if (size < (int) sizeof(struct input_event)) {
+            syslog(LOG_ERR, "Error %d (%s): reading of '%s' failed", errno, strerror(errno), found_event);
+            close(fd);
+            return(-1);
+        } else {
+            // Read first value of input buffer
+            key_value = ev[0].value;
+            close(fd);
+            return(key_value);
+        }
+    }
+}
+
 bool key_pressed(char * found_event, bool check_key_value, int key_value, bool * halt_requested){
     int fd;
     unsigned int size;
@@ -104,6 +130,7 @@ bool key_pressed(char * found_event, bool check_key_value, int key_value, bool *
     unsigned int j;
     if ((fd = open(found_event, O_RDONLY)) < 0) {
         syslog(LOG_ERR, "Error %d (%s): unable to open '%s'", errno, strerror(errno), found_event);
+        *halt_requested = true;
         return(false);
     }
     while (!*halt_requested){
@@ -140,21 +167,11 @@ bool key_pressed(char * found_event, bool check_key_value, int key_value, bool *
                     if (!tstamp_set){
                         tstamp_set = true;
                         timestamp_s = (ev[0].time.tv_sec * 1000000) + ev[0].time.tv_usec ;
-                        /*
-                        printf("Tstamp s : %ld  us : %ld\n", ev[0].time.tv_sec, ev[0].time.tv_usec);
-                        printf("Tstamp initial : %ld\n", timestamp_s);
-                        */
                         /* == Right key pressed */
                         close(fd);
                         return(true);
                     } else {
-                        /*
-                        printf("Tstamp s : %ld  us : %ld\n", ev[0].time.tv_sec, ev[0].time.tv_usec);
-                        printf("     Tstamp_s : %ld\n", timestamp_s);
-                        printf("Tstamp actuel : %ld\n", (ev[0].time.tv_sec * 1000000 + ev[0].time.tv_usec));
-                        */
                         difference_t = (ev[0].time.tv_sec * 1000000 + ev[0].time.tv_usec) - timestamp_s;
-                        // printf("   Difference : %ld  \n", difference_t);
                         if (difference_t > ANTI_BOUNCE_FACTOR){
                             tstamp_set = false;
                         }

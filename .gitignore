@@ -1,3 +1,4 @@
 *.o
 build/usbemergencybutton
+tools/get_key_from_device
 .vscode

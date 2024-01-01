@@ -18,4 +18,4 @@ key_value = 0x7002c;
 asynchronous_launch = false;
 # Script launched when the button is pressed
 # (Default is /bin/true)
-script = "date >> /tmp/emergency_button_log";
+script = "date >> /tmp/panic_button_log";

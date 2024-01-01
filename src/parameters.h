@@ -19,9 +19,10 @@
 // define DEFAULT_KEY_VALUE 0x7005d
 
 #include <stdbool.h>    /* booleans */
+#include <unistd.h>     /* file detection */
 #include <iniparser.h>  /* parsing configuration file */
 
-char* load_parameters_from( char* config_file_name,
+bool load_parameters_from( char* config_file_name,
                             char* script_name,
                             bool *asynchronous_launch,
                             unsigned short *vendor_id,

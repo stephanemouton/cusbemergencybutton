@@ -7,19 +7,29 @@
 #include "parameters.h"
 #include <syslog.h>
 
-char* load_parameters_from(char* config_file_name,
-                          char* script_name,
-                          bool *asynchronous_launch,
-                          unsigned short *vendor_id,
-                          unsigned short *product_id,
-                          bool *check_key_value,
-                          int *key_value){
+bool load_parameters_from(char* config_file_name,
+                                char* script_name,
+                                bool *asynchronous_launch,
+                                unsigned short *vendor_id,
+                                unsigned short *product_id,
+                                bool *check_key_value,
+                                int *key_value){
         dictionary* ini ;
         syslog(LOG_INFO, "loading parameters.");
+        if (access(config_file_name, F_OK) != 0) {
+                // file doesn't exist
+                syslog(LOG_ERR, "Cannot find file %s . Exiting",config_file_name);
+                return(false);
+        }
+        if (access(config_file_name, R_OK) != 0) {
+                // file is not readable
+                syslog(LOG_ERR, "Not enough rights to read file %s . Exiting",config_file_name);
+                return(false);
+        }
         ini = iniparser_load(config_file_name);
         if (ini==NULL) {
-                syslog(LOG_ERR, "Cannot parse file %s. Exiting",config_file_name);
-                exit(EXIT_FAILURE);
+                syslog(LOG_ERR, "Cannot parse file %s . Exiting",config_file_name);
+                return(false);
         }
         /* Get input device attributes */
         *vendor_id  = iniparser_getint(ini, "device:vendor_id", DEFAULT_VENDOR_ID);
@@ -28,7 +38,7 @@ char* load_parameters_from(char* config_file_name,
         *key_value = iniparser_getint(ini, "device:key_value", DEFAULT_KEY_VALUE);
 
         /* Get Action parameters, related to script to execute */
-        free(script_name);
+        // prepare default value for script name, allocated, before reading configuration file
         script_name = strdup(iniparser_getstring(ini, "action:script", (char *)DEFAULT_SCRIPT));
         *asynchronous_launch = iniparser_getboolean(ini, "action:asynchronous_launch", false);
 
@@ -39,5 +49,5 @@ char* load_parameters_from(char* config_file_name,
 
         // As script name is stored in allocated memory, we can free memory used to read configuration file
         iniparser_freedict(ini);
-        return(script_name);
+        return(true);
 }

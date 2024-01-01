@@ -6,8 +6,9 @@
 # (it implies that IDs are not restricted to USB devices)
 # The goal is to find the associate device /dev/input/event??
 # Values are expressed in hexadecimal, as shown in /proc/bus/input/devices
-vendor_ID  = 0x2704;
-product_ID = 0x2018;
+# Case Logic keypad
+vendor_ID  = 0x05a4;
+product_ID = 0x9759;
 # Do we expect a specific key and then which scan value?
 expect_specific_key = true;
 key_value = 0x7002c;
@@ -18,4 +19,4 @@ key_value = 0x7002c;
 asynchronous_launch = false;
 # Script launched when the button is pressed
 # (Default is /bin/true)
-script = "date >> /tmp/emergency_button_log";
+script = "date >> /tmp/panic_button_log";
