@@ -1,4 +1,4 @@
-# How to find if a given USB device can be used with usbemergency
+# How to use a given USB device usbemergencybutton
 ## Tools to detect usable USB devices 
 Several tools are provided to help find usable connected keyboards and set input device information (vendor ID and product IV) in usbemergency configuration file.
 * `list_usb_dev.sh`: list all USB input devices, even not keyboards. Helpful to check if USB hardware is detected correctly. Exploit data from `/sys/bus/usb/devices/usb*/` according to suggestions on [how to detect keyboard from bash script](https://serverfault.com/questions/126291/ubuntu-keyboard-detection-from-bash-script) and [locate where they are mounted](https://askubuntu.com/questions/725068/where-is-my-keyboard-mouse-and-other-hci-devices-mounted-in-linux
