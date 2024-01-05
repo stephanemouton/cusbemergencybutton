@@ -20,9 +20,9 @@ More information on how to retrieve those ID values with a shell script as well 
 
 ## Build & installation
 ### Dependencies
-The iniparser library [written by Nicolas Devilla](http://ndevilla.free.fr/iniparser/) must be installed to run.
+The iniparser library [written by Nicolas Devilla](https://github.com/ndevilla/iniparser) must be installed to run.
 
-Development version of libiniparser needs also to be deployed in order to buld usbemergency (linker directive -l iniparser is used during build)
+Development version of libiniparser needs also to be deployed in order to build usbemergency (linker directive -l iniparser is used during build)
 
 ### Build
 To compile usbemergencybutton, just type
