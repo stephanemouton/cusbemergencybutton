@@ -1,0 +1,21 @@
+#
+# Configuration file for USB emergency button
+#
+[Device]
+# Input device, identified by vendor ID and product ID as seen in /proc/bus/input/devices
+# (it implies that IDs are not restricted to USB devices)
+# The goal is to find the associate device /dev/input/event??
+# Values are expressed in hexadecimal, as shown in /proc/bus/input/devices
+# Case Logic keypad
+vendor_ID  = 0x05a4;
+product_ID = 0x9759;
+# Do we expect a specific key and then which scan value?
+expect_specific_key = false;
+
+[Action]
+# Script to be launched in asynchronous mode (i.e. in background)?
+# Default is false
+asynchronous_launch = false;
+# Script launched when the button is pressed
+# (Default is /bin/true)
+script = "date >> /tmp/result_usbemergencybutton_script.log";

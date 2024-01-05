@@ -32,7 +32,7 @@
 // ======== Global variables and DEFINEs
 #define EXIT_SUCCESS 0
 #define EXIT_FAILURE 1
-#define PROGRAM_VERSION "0.2"
+#define PROGRAM_VERSION "0.3"
 #define DEFAULT_CONFIGURATION_FILE "/etc/usbemergencybutton.conf"
 #define PID_FILE_NAME "/var/run/usbemergencybutton.pid"
 
@@ -70,7 +70,7 @@ void signal_handler(int signal){
         case SIGHUP :
             syslog(LOG_INFO, "Caught SIGHUP. Reloading parameters from %s .",config_file_name);
             if(!load_parameters_from( config_file_name,
-                                        script_name,
+                                        &script_name,
                                         &asynchronous_launch,
                                         &vendor_id,
                                         &product_id,
@@ -253,7 +253,7 @@ int main(int argc, char** argv){
     }
 
     if (!load_parameters_from( config_file_name,
-                                script_name,
+                                &script_name,
                                 &asynchronous_launch,
                                 &vendor_id,
                                 &product_id,

@@ -12,18 +12,18 @@
 #define DEFAULT_PRODUCT_ID  0x2018
 #define DEFAULT_KEY_VALUE   0x7002c
 
-// Value for CASE Logic USB keypad (Model CLNP-1)
+// Value for CASE Logic USB keypad (Model CLNP-1):
 // #define DEFAULT_VENDOR_ID   0x05a4
 // #define DEFAULT_PRODUCT_ID  0x9759
-// '5' key
-// define DEFAULT_KEY_VALUE 0x7005d
+// Value for '5' key of the keypad:
+// #define DEFAULT_KEY_VALUE 0x7005d
 
 #include <stdbool.h>    /* booleans */
 #include <unistd.h>     /* file detection */
 #include <iniparser.h>  /* parsing configuration file */
 
 bool load_parameters_from( char* config_file_name,
-                            char* script_name,
+                            char** script_name,
                             bool *asynchronous_launch,
                             unsigned short *vendor_id,
                             unsigned short *product_id,
