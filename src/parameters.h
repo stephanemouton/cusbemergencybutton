@@ -20,7 +20,7 @@
 
 #include <stdbool.h>    /* booleans */
 #include <unistd.h>     /* file detection */
-#include <iniparser.h>  /* parsing configuration file */
+#include <iniparser/iniparser.h>  /* parsing configuration file */
 
 bool load_parameters_from( char* config_file_name,
                             char** script_name,

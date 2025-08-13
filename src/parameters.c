@@ -5,6 +5,7 @@
  */
 
 #include "parameters.h"
+#include "string.h"
 #include <syslog.h>
 
 bool load_parameters_from(char* config_file_name,
