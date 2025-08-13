@@ -1,6 +1,6 @@
 /* 
  * File: parameters.c
- * Goal: Parameters management using iniparser library
+ * Goal: Parameters management using "iniparser" library
  * Author: Stéphane Mouton
  */
 
